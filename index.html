@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>🎯 Tic Tac Toe - Lawan Komputer</title>
+<style>
+  /* -------------------------
+     Variables & base styles
+     ------------------------- */
+  :root{
+    --bg-1: #050617;
+    --bg-2: #0b0f1a;
+    --neon-blue: #33ccff;
+    --neon-purple: #b36bff;
+    --glass: rgba(255,255,255,0.04);
+    --card: linear-gradient(135deg, rgba(51,204,255,0.06), rgba(179,107,255,0.05));
+    --glow: 0 6px 24px rgba(51,204,255,0.06), 0 0 20px rgba(179,107,255,0.06);
+    --cell-size: min(18vmin, 90px);
+    --accent: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+
+  *{box-sizing:border-box}
+  html,body{
+    height:100%;
+    margin:0;
+    font-family:var(--font-sans);
+    background:
+      radial-gradient(800px 400px at 10% 10%, rgba(51,204,255,0.04), transparent 5%),
+      radial-gradient(600px 300px at 90% 90%, rgba(179,107,255,0.03), transparent 10%),
+      linear-gradient(180deg,var(--bg-1),var(--bg-2));
+    color:#e9eefb;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    padding:4vmin;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* -------------------------
+     Layout card
+     ------------------------- */
+  .app {
+    width:clamp(320px, 88vw, 820px);
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:16px;
+    padding:2.2vmin;
+    box-shadow: var(--glow);
+    border: 1px solid rgba(255,255,255,0.03);
+    display:flex;
+    gap:1.4vmin;
+    flex-direction:column;
+    align-items:center;
+    position:relative;
+    overflow:hidden;
+  }
+
+  header{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem;
+  }
+
+  .title{
+    display:flex;
+    flex-direction:column;
+    gap:0.2rem;
+  }
+  .title h1{
+    margin:0;
+    font-size:calc(1.6rem + 0.6vmin);
+    display:flex;
+    align-items:center;
+    gap:0.6rem;
+    letter-spacing:0.4px;
+    text-shadow: 0 0 10px rgba(51,204,255,0.12), 0 0 20px rgba(179,107,255,0.08);
+  }
+  .subtitle{
+    font-size:0.86rem;
+    color:rgba(233,238,251,0.7);
+  }
+
+  /* sound toggle button */
+  .controls{
+    display:flex;
+    gap:0.6rem;
+    align-items:center;
+  }
+  .icon-btn{
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    border:1px solid rgba(255,255,255,0.03);
+    padding:8px;
+    border-radius:10px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s;
+    min-width:44px; min-height:44px;
+    user-select:none;
+  }
+  .icon-btn:active{ transform:scale(.98) }
+  .icon-btn[aria-pressed="true"]{
+    box-shadow: 0 6px 18px rgba(51,204,255,0.08), 0 0 14px var(--neon-purple);
+  }
+
+  /* -------------------------
+     Board & cells
+     ------------------------- */
+  .board-wrap{
+    width:100%;
+    display:flex;
+    gap:1rem;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+  }
+
+  .board{
+    width: min(52vmin, 420px);
+    aspect-ratio: 1 / 1;
+    display:grid;
+    grid-template-columns: repeat(3,1fr);
+    gap:12px;
+    padding:12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:14px;
+    border: 1px solid rgba(255,255,255,0.03);
+    touch-action: manipulation;
+  }
+
+  .cell{
+    background: radial-gradient(100% 60% at 20% 10%, rgba(255,255,255,0.018), transparent 30%), rgba(255,255,255,0.012);
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:calc(6vmin + 6px);
+    min-height:var(--cell-size);
+    cursor:pointer;
+    user-select:none;
+    position:relative;
+    transition:transform .14s cubic-bezier(.2,.9,.3,1), box-shadow .18s;
+    box-shadow: 0 6px 18px rgba(2,6,23,0.4);
+    overflow:hidden;
+  }
+  .cell:active{ transform:scale(.98) }
+  .cell:hover::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(90deg, rgba(51,204,255,0.03), rgba(179,107,255,0.03));
+    pointer-events:none;
+  }
+
+  /* X & O styles */
+  .mark{
+    font-weight:800;
+    text-shadow: 0 2px 12px rgba(51,204,255,0.12);
+    transform:scale(.96);
+    transition:transform .16s cubic-bezier(.2,.9,.3,1), opacity .2s;
+    opacity:0;
+    display:inline-block;
+  }
+  .cell.filled .mark{ opacity:1; transform:scale(1); }
+
+  .mark.x{
+    color:var(--neon-blue);
+    filter:drop-shadow(0 0 10px rgba(51,204,255,0.28));
+  }
+  .mark.o{
+    color:var(--neon-purple);
+    filter:drop-shadow(0 0 12px rgba(179,107,255,0.28));
+  }
+
+  /* winning highlight line */
+  .win-line{
+    position:absolute;
+    background: linear-gradient(90deg, rgba(51,204,255,0.5), rgba(179,107,255,0.5));
+    height:10px;
+    border-radius:999px;
+    left:0;
+    top:0;
+    transform-origin:center;
+    pointer-events:none;
+    box-shadow:0 0 40px rgba(51,204,255,0.2), 0 0 80px rgba(179,107,255,0.12);
+    opacity:0;
+    transition:opacity .18s, transform .18s;
+  }
+
+  /* result panel */
+  .result{
+    margin-top:8px;
+    min-height:calc(2.6rem + 0.6vmin);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    justify-content:center;
+    width:100%;
+  }
+  .result .text{
+    font-size:1.05rem;
+    padding:8px 14px;
+    border-radius:10px;
+    background:linear-gradient(90deg, rgba(255,255,255,0.02), transparent);
+    border:1px solid rgba(255,255,255,0.02);
+    opacity:0;
+    transform:translateY(8px);
+    transition:opacity .22s, transform .22s;
+    text-align:center;
+    min-width:180px;
+  }
+  .result.show .text{
+    opacity:1; transform:translateY(0);
+  }
+
+  .btn{
+    background:var(--accent);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    border: 1px solid rgba(255,255,255,0.04);
+    padding:10px 14px;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:700;
+    letter-spacing:0.2px;
+    backdrop-filter: blur(6px);
+  }
+  .btn.secondary{
+    background:none;
+    -webkit-text-fill-color:initial;
+    color:rgba(233,238,251,0.9);
+    border:1px solid rgba(255,255,255,0.03);
+  }
+
+  /* small device adjustments */
+  @media (max-width:420px){
+    .board{ gap:8px; padding:8px; }
+    .cell{ font-size:calc(10vmin); min-height:calc(16vmin); border-radius:8px; }
+    .title h1{ font-size:1.25rem }
+  }
+
+  /* glow/celebration animations */
+  .celebrate {
+    animation: pulseGlow 900ms ease-in-out 3;
+  }
+  @keyframes pulseGlow{
+    0%{ filter: drop-shadow(0 0 6px rgba(51,204,255,0.06)) }
+    50%{ filter: drop-shadow(0 0 28px rgba(179,107,255,0.25)) }
+    100%{ filter: drop-shadow(0 0 6px rgba(51,204,255,0.06)) }
+  }
+
+  /* fade for result */
+  .fade {
+    animation: fadeIn 420ms ease both;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* hint text */
+  .hint{
+    font-size:0.86rem;
+    color:rgba(233,238,251,0.65);
+    margin-top:6px;
+    text-align:center;
+  }
+
+  /* accessibility focus */
+  .cell:focus{ outline:2px solid rgba(255,255,255,0.06); box-shadow:0 0 24px rgba(51,204,255,0.06); transform:translateY(-2px) }
+</style>
+</head>
+<body>
+  <main class="app" id="app">
+    <header>
+      <div class="title" aria-hidden="false">
+        <h1>🎯 Tic Tac Toe - Lawan Komputer</h1>
+        <div class="subtitle">Pilih kotak untuk mulai — Kamu: <strong id="playerMarkLabel">X</strong></div>
+      </div>
+      <div class="controls" role="group" aria-label="Kontrol permainan">
+        <button id="soundToggle" class="icon-btn" title="Bunyi: aktif / mati" aria-pressed="true">🔊</button>
+        <button id="restartBtn" class="icon-btn" title="Mulai ulang game">🔁</button>
+      </div>
+    </header>
+
+    <section class="board-wrap" aria-live="polite">
+      <div class="board" id="board" role="grid" aria-label="Papan Tic Tac Toe">
+        <!-- 9 cells generated by JS -->
+      </div>
+
+      <!-- Win line -->
+      <div id="winLine" class="win-line" aria-hidden="true"></div>
+
+      <div class="result" id="resultBar" aria-hidden="true">
+        <div class="text" id="resultText" role="status"></div>
+        <button class="btn secondary" id="playAgain" style="display:none">Main Lagi</button>
+      </div>
+
+      <div class="hint">Tip: AI menggunakan logika minimax sederhana — coba kalahkan komputer! 😉</div>
+    </section>
+  </main>
+
+<script>
+/* ============================
+   Tic Tac Toe - Single File
+   - Vanilla JS
+   - Minimax AI
+   - WebAudio for SFX + Background
+   ============================ */
+
+/* ---------- Game state ---------- */
+const PLAYER = 'X';
+const COMPUTER = 'O';
+let boardState = Array(9).fill(null); // null, 'X', 'O'
+let isGameOver = false;
+let soundEnabled = true;
+let isPlayerTurn = true; // player always X and starts
+const boardEl = document.getElementById('board');
+const resultBar = document.getElementById('resultBar');
+const resultText = document.getElementById('resultText');
+const playAgainBtn = document.getElementById('playAgain');
+const soundToggle = document.getElementById('soundToggle');
+const restartBtn = document.getElementById('restartBtn');
+const winLineEl = document.getElementById('winLine');
+
+/* ---------- Create board cells ---------- */
+function createCells(){
+  boardEl.innerHTML = '';
+  for(let i=0;i<9;i++){
+    const c = document.createElement('button');
+    c.className = 'cell';
+    c.setAttribute('role','gridcell');
+    c.setAttribute('aria-label', `Kotak ${i+1}`);
+    c.tabIndex = 0;
+    c.dataset.idx = i;
+    c.innerHTML = `<span class="mark" aria-hidden="true"></span>`;
+    c.addEventListener('click', onCellClick);
+    c.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); c.click(); }
+    });
+    boardEl.appendChild(c);
+  }
+}
+
+/* ---------- Render board ---------- */
+function renderBoard(){
+  for(let i=0;i<9;i++){
+    const cell = boardEl.children[i];
+    const markSpan = cell.querySelector('.mark');
+    const val = boardState[i];
+    cell.classList.toggle('filled', !!val);
+    if(val === 'X'){
+      markSpan.className = 'mark x';
+      markSpan.textContent = 'X';
+    } else if(val === 'O'){
+      markSpan.className = 'mark o';
+      markSpan.textContent = 'O';
+    } else {
+      markSpan.className = 'mark';
+      markSpan.textContent = '';
+    }
+  }
+}
+
+/* ---------- Utility: winning combinations ---------- */
+const WIN_COMBOS = [
+  [0,1,2], [3,4,5], [6,7,8], // rows
+  [0,3,6], [1,4,7], [2,5,8], // cols
+  [0,4,8], [2,4,6]           // diags
+];
+
+/* ---------- Check winner or tie ---------- */
+function checkWinner(state){
+  for(const combo of WIN_COMBOS){
+    const [a,b,c] = combo;
+    if(state[a] && state[a] === state[b] && state[a] === state[c]){
+      return { winner: state[a], combo };
+    }
+  }
+  if(state.every(Boolean)) return { winner: null, combo: null }; // tie
+  return null; // ongoing
+}
+
+/* ---------- Minimax algorithm for AI ---------- */
+function minimax(newBoard, player){
+  // returns { index, score }
+  const result = checkWinner(newBoard);
+  if(result){
+    if(result.winner === COMPUTER) return { score: 10 };
+    if(result.winner === PLAYER) return { score: -10 };
+    if(result.winner === null) return { score: 0 };
+  }
+
+  const avail = newBoard.map((v,i)=> v ? null : i).filter(v=>v!==null);
+  const moves = [];
+
+  for(const idx of avail){
+    const move = {};
+    move.index = idx;
+    newBoard[idx] = player;
+
+    if(player === COMPUTER){
+      const outcome = minimax(newBoard, PLAYER);
+      move.score = outcome.score;
+    } else {
+      const outcome = minimax(newBoard, COMPUTER);
+      move.score = outcome.score;
+    }
+
+    newBoard[idx] = null;
+    moves.push(move);
+  }
+
+  // choose best move
+  let bestMove;
+  if(player === COMPUTER){
+    let bestScore = -Infinity;
+    for(const m of moves){
+      if(m.score > bestScore){ bestScore = m.score; bestMove = m; }
+    }
+  } else {
+    let bestScore = Infinity;
+    for(const m of moves){
+      if(m.score < bestScore){ bestScore = m.score; bestMove = m; }
+    }
+  }
+  return bestMove;
+}
+
+/* Slight optimization: if board is empty choose center */
+function bestAIMove(){
+  if(boardState.every(v => v === null)) return 4;
+  const move = minimax([...boardState], COMPUTER);
+  return move ? move.index : null;
+}
+
+/* ---------- Event: player clicks cell ---------- */
+function onCellClick(e){
+  if(isGameOver || !isPlayerTurn) return;
+  const idx = Number(e.currentTarget.dataset.idx);
+  if(boardState[idx]) return;
+  makeMove(idx, PLAYER);
+}
+
+/* ---------- Apply move ---------- */
+function makeMove(idx, mark){
+  boardState[idx] = mark;
+  renderBoard();
+  animateCell(idx);
+  playClick();
+
+  const result = checkWinner(boardState);
+  if(result){
+    endGame(result);
+    return;
+  }
+
+  if(mark === PLAYER){
+    isPlayerTurn = false;
+    // Delay AI a bit for UX
+    setTimeout(()=> {
+      const aiIdx = bestAIMove();
+      if(aiIdx !== null && !isGameOver){
+        makeMove(aiIdx, COMPUTER);
+        isPlayerTurn = true;
+      }
+    }, 380 + Math.random()*220);
+  } else {
+    // after computer move, check again handled above
+    return;
+  }
+}
+
+/* ---------- Animate cell selection ---------- */
+function animateCell(idx){
+  const el = boardEl.children[idx];
+  el.classList.add('celebrate');
+  setTimeout(()=> el.classList.remove('celebrate'), 520);
+}
+
+/* ---------- End game: show result, play sound, draw line ---------- */
+function endGame(result){
+  isGameOver = true;
+  const { winner, combo } = result;
+  if(winner === PLAYER){
+    showResult("Kamu Menang!");
+    playWin();
+    highlightWin(combo);
+  } else if(winner === COMPUTER){
+    showResult("Komputer Menang!");
+    playLose();
+    highlightWin(combo);
+  } else { // tie
+    showResult("Seri!");
+    playTie();
+    // small tie effect
+    boardEl.classList.add('celebrate');
+    setTimeout(()=> boardEl.classList.remove('celebrate'), 900);
+  }
+  // show "Main Lagi" button
+  playAgainBtn.style.display = 'inline-flex';
+  resultBar.setAttribute('aria-hidden','false');
+  resultBar.classList.add('show');
+}
+
+/* ---------- Draw line over the board for winning combo ---------- */
+function highlightWin(combo){
+  if(!combo) return;
+  const rects = combo.map(i => boardEl.children[i].getBoundingClientRect());
+  const boardRect = boardEl.getBoundingClientRect();
+
+  // center of first and last cell
+  const c1 = {
+    x: rects[0].left + rects[0].width/2 - boardRect.left,
+    y: rects[0].top + rects[0].height/2 - boardRect.top
+  };
+  const c2 = {
+    x: rects[2].left + rects[2].width/2 - boardRect.left,
+    y: rects[2].top + rects[2].height/2 - boardRect.top
+  };
+
+  const dx = c2.x - c1.x;
+  const dy = c2.y - c1.y;
+  const len = Math.hypot(dx,dy);
+  const angle = Math.atan2(dy,dx) * 180/Math.PI;
+
+  winLineEl.style.width = len + 'px';
+  winLineEl.style.height = Math.max(10, Math.min(26, Math.round(rects[0].height*0.2))) + 'px';
+  winLineEl.style.left = (c1.x - 4) + 'px';
+  winLineEl.style.top = (c1.y - (parseFloat(winLineEl.style.height)/2)) + 'px';
+  winLineEl.style.transform = `rotate(${angle}deg)`;
+  winLineEl.style.opacity = 1;
+  // animate fade-in then fade-out subtle
+  winLineEl.animate([
+    { opacity: 0, transform: `rotate(${angle}deg) scaleX(0.6)`},
+    { opacity: 1, transform: `rotate(${angle}deg) scaleX(1.02)`},
+    { opacity: 1, transform: `rotate(${angle}deg) scaleX(1)`},
+  ], { duration: 500, easing: 'cubic-bezier(.2,.9,.3,1)' });
+  // keep visible a bit
+  setTimeout(()=> {
+    winLineEl.style.transition = 'opacity .36s';
+    winLineEl.style.opacity = 0;
+  }, 1600);
+}
+
+/* ---------- Show result text ---------- */
+function showResult(text){
+  resultText.textContent = text;
+  resultText.classList.add('fade');
+}
+
+/* ---------- Reset game ---------- */
+function resetGame(){
+  boardState = Array(9).fill(null);
+  isGameOver = false;
+  isPlayerTurn = true;
+  renderBoard();
+  resultText.textContent = '';
+  playAgainBtn.style.display = 'none';
+  winLineEl.style.opacity = 0;
+  resultBar.classList.remove('show');
+}
+
+/* ---------- Button handlers ---------- */
+playAgainBtn.addEventListener('click', ()=> resetGame());
+restartBtn.addEventListener('click', ()=> resetGame());
+soundToggle.addEventListener('click', ()=>{
+  soundEnabled = !soundEnabled;
+  soundToggle.setAttribute('aria-pressed', String(soundEnabled));
+  soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+  if(soundEnabled) audioEngine.startBackground();
+  else audioEngine.stopBackground();
+});
+
+/* ---------- Initialize board ---------- */
+createCells();
+renderBoard();
+
+/* ---------- WebAudio: SFX & BGM (generated, no external files) ---------- */
+const audioEngine = (function(){
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  // master gain
+  const master = ctx.createGain(); master.gain.value = 0.9;
+  master.connect(ctx.destination);
+
+  // background music nodes
+  let bgOsc1=null, bgOsc2=null, bgGain=null, bgPlaying=false;
+  function startBackground(){
+    // Resume context if suspended
+    if(ctx.state === 'suspended') ctx.resume();
+    if(bgPlaying) return;
+    // create gentle pad
+    bgOsc1 = ctx.createOscillator();
+    bgOsc2 = ctx.createOscillator();
+    bgGain = ctx.createGain();
+    bgOsc1.type = 'sine';
+    bgOsc2.type = 'sine';
+    bgOsc1.frequency.value = 110; // low drone
+    bgOsc2.frequency.value = 220;
+    // subtle detune & modulation
+    bgOsc1.detune.value = -6;
+    bgOsc2.detune.value = 6;
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.12;
+    lfoGain.gain.value = 6;
+    lfo.connect(lfoGain);
+    lfoGain.connect(bgOsc1.frequency);
+    lfoGain.connect(bgOsc2.frequency);
+
+    bgGain.gain.value = 0.03; // low volume
+    bgOsc1.connect(bgGain); bgOsc2.connect(bgGain);
+    bgGain.connect(master);
+
+    bgOsc1.start(); bgOsc2.start(); lfo.start();
+    bgPlaying = true;
+    // store lfo so we can stop it later
+    bgOsc1._lfo = lfo;
+  }
+  function stopBackground(){
+    if(!bgPlaying) return;
+    try{
+      bgOsc1.stop(); bgOsc2.stop();
+      bgOsc1._lfo.stop();
+    }catch(e){}
+    bgOsc1.disconnect(); bgOsc2.disconnect(); bgGain.disconnect();
+    bgOsc1 = bgOsc2 = bgGain = null;
+    bgPlaying = false;
+  }
+
+  // simple click sound
+  function playClick(){
+    if(!soundEnabled) return;
+    if(ctx.state === 'suspended') ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(880, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.06, t+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.14);
+    osc.connect(g); g.connect(master);
+    osc.start(t); osc.stop(t+0.16);
+  }
+
+  // victory tone
+  function playWin(){
+    if(!soundEnabled) return;
+    if(ctx.state === 'suspended') ctx.resume();
+    const t = ctx.currentTime;
+    const freqs = [660,880,1100];
+    freqs.forEach((f,i)=>{
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(f, t + i*0.08);
+      g.gain.setValueAtTime(0.0001, t + i*0.08);
+      g.gain.exponentialRampToValueAtTime(0.09, t + i*0.08 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i*0.08 + 0.5);
+      o.connect(g); g.connect(master);
+      o.start(t + i*0.08);
+      o.stop(t + i*0.08 + 0.6);
+    });
+  }
+
+  // lose tone (minor)
+  function playLose(){
+    if(!soundEnabled) return;
+    if(ctx.state === 'suspended') ctx.resume();
+    const t = ctx.currentTime;
+    const freqs = [440,330];
+    freqs.forEach((f,i)=>{
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(f, t + i*0.06);
+      g.gain.setValueAtTime(0.0001, t + i*0.06);
+      g.gain.exponentialRampToValueAtTime(0.07, t + i*0.06 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i*0.06 + 0.38);
+      o.connect(g); g.connect(master);
+      o.start(t + i*0.06);
+      o.stop(t + i*0.06 + 0.5);
+    });
+  }
+
+  // tie sound (soft chime)
+  function playTie(){
+    if(!soundEnabled) return;
+    if(ctx.state === 'suspended') ctx.resume();
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(520, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.06, t+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.45);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t+0.5);
+  }
+
+  // start background automatically if allowed
+  return {
+    startBackground,
+    stopBackground,
+    playClick,
+    playWin,
+    playLose,
+    playTie,
+    ctx
+  };
+})();
+
+/* expose simple wrappers to be used by game */
+function playClick(){ audioEngine.playClick(); }
+function playWin(){ audioEngine.playWin(); }
+function playLose(){ audioEngine.playLose(); }
+function playTie(){ audioEngine.playTie(); }
+
+/* Try autoplay background; many browsers block until user gesture.
+   We'll attempt to start, but if blocked, it will start when user toggles sound. */
+try { audioEngine.startBackground(); } catch(e){ /* ignore */ }
+
+/* ---------- Accessibility: announce result for screen readers ---------- */
+function announce(text){
+  // Already using aria-live region (board-wrap) but set role/status on resultText
+  resultText.setAttribute('aria-live','polite');
+  resultText.textContent = text;
+}
+
+/* ---------- When game ends, announce and set visuals ---------- */
+function endGame(result){
+  isGameOver = true;
+  const { winner, combo } = result;
+  if(winner === PLAYER){
+    announce("Kamu Menang!");
+    audioEngine.playWin();
+    highlightWin(combo);
+  } else if(winner === COMPUTER){
+    announce("Komputer Menang!");
+    audioEngine.playLose();
+    highlightWin(combo);
+  } else {
+    announce("Seri!");
+    audioEngine.playTie();
+    boardEl.classList.add('celebrate');
+    setTimeout(()=> boardEl.classList.remove('celebrate'), 900);
+  }
+  playAgainBtn.style.display = 'inline-flex';
+  resultBar.setAttribute('aria-hidden','false');
+  resultBar.classList.add('show');
+  resultText.textContent = winner === null ? 'Seri!' : (winner === PLAYER ? 'Kamu Menang!' : 'Komputer Menang!');
+}
+
+/* ---------- Ensure touch targets size & responsiveness on resize ---------- */
+function onResize(){
+  // cell sizes auto adjust via CSS; but recompute win line in case user resized while win visible.
+  // hide any visible win line just in case
+  winLineEl.style.opacity = 0;
+}
+window.addEventListener('resize', onResize);
+
+/* ---------- Start state ---------- */
+resetGame();
+
+/* ---------- Small enhancement: let user choose to start as O in future (not requested, omitted) ---------- */
+/* All required features are implemented as requested. Enjoy! */
+
+</script>
+</body>
+</html>
